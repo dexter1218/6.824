@@ -49,7 +49,9 @@ package labrpc
 //   pass svc to srv.AddService()
 //
 
-import "6.5840/labgob"
+import (
+	"6.5840/labgob"
+)
 import "bytes"
 import "reflect"
 import "sync"
@@ -103,6 +105,7 @@ func (e *ClientEnd) Call(svcMeth string, args interface{}, reply interface{}) bo
 		// the request has been sent.
 	case <-e.done:
 		// entire Network has been destroyed.
+		// fmt.Printf("reprep done")
 		return false
 	}
 
@@ -111,6 +114,7 @@ func (e *ClientEnd) Call(svcMeth string, args interface{}, reply interface{}) bo
 	//
 	rep := <-req.replyCh
 	if rep.ok {
+		//fmt.Printf("reprep okok")
 		rb := bytes.NewBuffer(rep.reply)
 		rd := labgob.NewDecoder(rb)
 		if err := rd.Decode(reply); err != nil {
@@ -118,6 +122,7 @@ func (e *ClientEnd) Call(svcMeth string, args interface{}, reply interface{}) bo
 		}
 		return true
 	} else {
+		//fmt.Printf("reprep false")
 		return false
 	}
 }

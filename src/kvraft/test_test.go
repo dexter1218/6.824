@@ -139,6 +139,7 @@ func checkClntAppends(t *testing.T, clnt int, v string, count int) {
 	lastoff := -1
 	for j := 0; j < count; j++ {
 		wanted := "x " + strconv.Itoa(clnt) + " " + strconv.Itoa(j) + " y"
+		// DPrintf("%v", v)
 		off := strings.Index(v, wanted)
 		if off < 0 {
 			t.Fatalf("%v missing element %v in Append result %v", clnt, wanted, v)

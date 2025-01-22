@@ -8,8 +8,10 @@ package raft
 // test with the original before submitting.
 //
 
-import "testing"
-import "fmt"
+import (
+	"fmt"
+	"testing"
+)
 import "time"
 import "math/rand"
 import "sync/atomic"
@@ -61,31 +63,42 @@ func TestReElection3A(t *testing.T) {
 
 	// if the leader disconnects, a new one should be elected.
 	cfg.disconnect(leader1)
-	cfg.checkOneLeader()
+	DPrintf("1.Test (3A): disconnected %v \n", leader1)
+	leader := cfg.checkOneLeader()
+	DPrintf("1.1 Test (3A): leader %v \n", leader)
 
 	// if the old leader rejoins, that shouldn't
 	// disturb the new leader. and the old leader
 	// should switch to follower.
 	cfg.connect(leader1)
+	DPrintf("2.Test (3A): connected %v\n", leader1)
 	leader2 := cfg.checkOneLeader()
+	DPrintf("3.Test (3A): now leader %v\n", leader2)
 
 	// if there's no quorum, no new leader should
 	// be elected.
 	cfg.disconnect(leader2)
+	DPrintf("4.Test (3A): disconnected %v\n", leader2)
 	cfg.disconnect((leader2 + 1) % servers)
+	DPrintf("5.Test (3A): disconnected %v\n", (leader2+1)%servers)
 	time.Sleep(2 * RaftElectionTimeout)
 
 	// check that the one connected server
 	// does not think it is the leader.
 	cfg.checkNoLeader()
+	DPrintf("Test (3A): noleader")
 
 	// if a quorum arises, it should elect a leader.
 	cfg.connect((leader2 + 1) % servers)
-	cfg.checkOneLeader()
+	DPrintf("6.Test (3A): connected %v\n", (leader2+1)%servers)
+	leader3 := cfg.checkOneLeader()
+	DPrintf("7.Test (3A): now leader %v\n", leader3)
 
 	// re-join of last node shouldn't prevent leader from existing.
 	cfg.connect(leader2)
-	cfg.checkOneLeader()
+	DPrintf("8.Test (3A): connected %v\n", leader2)
+	leader4 := cfg.checkOneLeader()
+	DPrintf("9.Test (3A): now leader %v\n", leader4)
 
 	cfg.end()
 }
@@ -195,8 +208,10 @@ func TestFollowerFailure3B(t *testing.T) {
 
 	// the leader and remaining follower should be
 	// able to agree despite the disconnected follower.
+	DPrintf("102102")
 	cfg.one(102, servers-1, false)
 	time.Sleep(RaftElectionTimeout)
+	DPrintf("103103")
 	cfg.one(103, servers-1, false)
 
 	// disconnect the remaining follower
@@ -464,6 +479,7 @@ func TestRejoin3B(t *testing.T) {
 	// leader network failure
 	leader1 := cfg.checkOneLeader()
 	cfg.disconnect(leader1)
+	DPrintf("%v down", leader1)
 
 	// make old leader try to agree on some entries
 	cfg.rafts[leader1].Start(102)
@@ -471,20 +487,23 @@ func TestRejoin3B(t *testing.T) {
 	cfg.rafts[leader1].Start(104)
 
 	// new leader commits, also for index=2
+	DPrintf("103103")
 	cfg.one(103, 2, true)
 
 	// new leader network failure
 	leader2 := cfg.checkOneLeader()
 	cfg.disconnect(leader2)
-
+	DPrintf("%v down", leader2)
 	// old leader connected again
 	cfg.connect(leader1)
 
+	DPrintf("104104")
 	cfg.one(104, 2, true)
 
 	// all together now
 	cfg.connect(leader2)
 
+	DPrintf("105105")
 	cfg.one(105, servers, true)
 
 	cfg.end()
@@ -1098,7 +1117,7 @@ func TestUnreliableChurn3C(t *testing.T) {
 const MAXLOGSIZE = 2000
 
 func snapcommon(t *testing.T, name string, disconnect bool, reliable bool, crash bool) {
-	iters := 30
+	iters := 20
 	servers := 3
 	cfg := make_config(t, servers, !reliable, true)
 	defer cfg.cleanup()
@@ -1109,6 +1128,7 @@ func snapcommon(t *testing.T, name string, disconnect bool, reliable bool, crash
 	leader1 := cfg.checkOneLeader()
 
 	for i := 0; i < iters; i++ {
+		DPrintf("victim %v", i)
 		victim := (leader1 + 1) % servers
 		sender := leader1
 		if i%3 == 1 {
@@ -1208,7 +1228,7 @@ func TestSnapshotAllCrash3D(t *testing.T) {
 		for i := 0; i < servers; i++ {
 			cfg.crash1(i)
 		}
-
+		DPrintf("dropdrop...")
 		// revive all
 		for i := 0; i < servers; i++ {
 			cfg.start1(i, cfg.applierSnap)

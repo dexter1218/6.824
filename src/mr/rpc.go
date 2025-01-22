@@ -6,7 +6,9 @@ package mr
 // remember to capitalize all names.
 //
 
-import "os"
+import (
+	"os"
+)
 import "strconv"
 
 //
@@ -23,7 +25,40 @@ type ExampleReply struct {
 }
 
 // Add your RPC definitions here.
+type GetFileArgs struct {
+	// Uid uuid.UUID
+}
 
+type GetFileReply struct {
+	FileName     string
+	MapNum       int
+	IfSendEnd    bool
+	IfProcessEnd bool
+}
+
+type GetReduceArgs struct {
+}
+
+type GetReduceReply struct {
+	ReduceNum    int
+	IfSendEnd    bool
+	IfProcessEnd bool
+}
+
+type ReduceArgs struct {
+	ReduceNum int
+}
+
+type ReduceReply struct {
+}
+
+type ReadArgs struct {
+	MapNum   int
+	FileName string
+}
+
+type ReadReply struct {
+}
 
 // Cook up a unique-ish UNIX-domain socket name
 // in /var/tmp, for the coordinator.

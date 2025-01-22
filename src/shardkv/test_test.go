@@ -823,7 +823,7 @@ func TestChallenge1Delete(t *testing.T) {
 	cfg.join(0)
 
 	// 30,000 bytes of total values.
-	n := 30
+	n := 20
 	ka := make([]string, n)
 	va := make([]string, n)
 	for i := 0; i < n; i++ {

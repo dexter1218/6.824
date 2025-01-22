@@ -148,8 +148,10 @@ func (cfg *config) checkLogs(i int, m ApplyMsg) (string, bool) {
 				m.CommandIndex, i, m.Command, j, old)
 		}
 	}
+	// DPrintf("log %v, command idx %v %v\n", i, m.CommandIndex, m.Command)
 	_, prevok := cfg.logs[i][m.CommandIndex-1]
 	cfg.logs[i][m.CommandIndex] = v
+	//DPrintf("cfglog %v", cfg.logs[i])
 	if m.CommandIndex > cfg.maxIndex {
 		cfg.maxIndex = m.CommandIndex
 	}
@@ -191,9 +193,12 @@ func (cfg *config) ingestSnap(i int, snapshot []byte, index int) string {
 	var xlog []interface{}
 	if d.Decode(&lastIncludedIndex) != nil ||
 		d.Decode(&xlog) != nil {
+		DPrintf("%v %v", snapshot, lastIncludedIndex)
+		// DPrintf("%v %v", d.Decode(&lastIncludedIndex), d.Decode(&xlog))
 		log.Fatalf("snapshot decode error")
 		return "snapshot Decode() error"
 	}
+	// DPrintf("lastIncludedIndex %v %v %v, snapshot", xlog, lastIncludedIndex, index)
 	if index != -1 && index != lastIncludedIndex {
 		err := fmt.Sprintf("server %v snapshot doesn't match m.SnapshotIndex", i)
 		return err
@@ -203,6 +208,7 @@ func (cfg *config) ingestSnap(i int, snapshot []byte, index int) string {
 		cfg.logs[i][j] = xlog[j]
 	}
 	cfg.lastApplied[i] = lastIncludedIndex
+	DPrintf("lastapplied after snapshot %v", cfg.lastApplied[i])
 	return ""
 }
 
@@ -224,6 +230,7 @@ func (cfg *config) applierSnap(i int, applyCh chan ApplyMsg) {
 			err_msg = cfg.ingestSnap(i, m.Snapshot, m.SnapshotIndex)
 			cfg.mu.Unlock()
 		} else if m.CommandValid {
+			DPrintf("get m %v, applididx %v", m, cfg.lastApplied[i])
 			if m.CommandIndex != cfg.lastApplied[i]+1 {
 				err_msg = fmt.Sprintf("server %v apply out of order, expected index %v, got %v", i, cfg.lastApplied[i]+1, m.CommandIndex)
 			}
@@ -240,6 +247,7 @@ func (cfg *config) applierSnap(i int, applyCh chan ApplyMsg) {
 
 			cfg.mu.Lock()
 			cfg.lastApplied[i] = m.CommandIndex
+			DPrintf("now cfg.lastApplied %v", cfg.lastApplied[i])
 			cfg.mu.Unlock()
 
 			if (m.CommandIndex+1)%SnapShotInterval == 0 {
@@ -251,6 +259,7 @@ func (cfg *config) applierSnap(i int, applyCh chan ApplyMsg) {
 					xlog = append(xlog, cfg.logs[i][j])
 				}
 				e.Encode(xlog)
+				// DPrintf("snapshotlog %v, index %v", xlog, m.CommandIndex)
 				rf.Snapshot(m.CommandIndex, w.Bytes())
 			}
 		} else {
@@ -495,6 +504,7 @@ func (cfg *config) nCommitted(index int) (int, interface{}) {
 
 		cfg.mu.Lock()
 		cmd1, ok := cfg.logs[i][index]
+		// DPrintf("cfglog, %v, index, %v, ok:%v", cfg.logs, index, ok)
 		cfg.mu.Unlock()
 
 		if ok {
@@ -567,6 +577,7 @@ func (cfg *config) one(cmd interface{}, expectedServers int, retry bool) int {
 			}
 			cfg.mu.Unlock()
 			if rf != nil {
+				// DPrintf("sent cmd %v", cmd)
 				index1, _, ok := rf.Start(cmd)
 				if ok {
 					index = index1
@@ -581,6 +592,7 @@ func (cfg *config) one(cmd interface{}, expectedServers int, retry bool) int {
 			t1 := time.Now()
 			for time.Since(t1).Seconds() < 2 {
 				nd, cmd1 := cfg.nCommitted(index)
+				// DPrintf("nd:%v, cmd1:%v cmd:%v, expectserver:%v", index, cmd1, cmd, expectedServers)
 				if nd > 0 && nd >= expectedServers {
 					// committed
 					if cmd1 == cmd {
